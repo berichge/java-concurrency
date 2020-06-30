@@ -141,8 +141,6 @@ Mutual exclusion and synchronization
 
 synchronized and wait(), notify(), notifyAll()
 
-
-
 ## Java thread life cycle
 
 NEW->RUNNABLE<->(BLOCKED, WAITING, TIMED_WAITING)
@@ -158,29 +156,53 @@ Runnable -> Terminated (stop(), interrupt())
 
 ## Java tools for concurrency
 
-### Lock and condition
-
-Destroy `no pre-emption` condition and avoid dead lock, based on Java synchronize, we need those additional features
-
-1. 响应中断
-2. 支持超时
-3. 非阻塞的获取锁
-
-try{}finally{}
-
-release lock in finally block
-
 ### Locks
 
-- ReentrantLock: ReentrantLock allow threads to enter into lock on a resource more than once
-- Condition: 管程里的条件变量。不能用wait(), notify()
-    - request 用 rpc 的 doReceived() 唤醒get()的等待功能
-- 
+#### Lock and Condition
+
+##### ReentrantrantLock
+
+##### Condition
+
+Condition in monitor module
+`final Condition notFull = lock.newCondition();`
+await(), signal(), signalAll() ~= wait(), notify(), notifyAll()
+
+##### Semaphore
+
+init(), up(), down() singal module.
+
+##### ReadWriteLock
+
+Allow multiple reads to shared resource
+Allow only one thread write
+During write, disable read operation
+不允许锁的升级： 从读锁升级为写锁
+允许锁的降级： 从写锁升级为读锁
+
+##### StampedLock
+
+Writing:
+Reading: no read lock will be obtained when write lock is held
+Optimistic Reading: no lock at all, be reading will failed when write lock is held
+
+##### CountDownLatch
+
+1 thread wait for multiple threads
+
+##### CyclicBarrier
+
+resource management across multiple threads
+
+##### Concurrent collections
+
+Synchronized collections
+`List list = Collections. synchronizedList(new ArrayList());`
+
+Concrruent collection: List,Set,Map,Queue(deque, block)
 
 ## Best Practices
 
-```
 永远只在更新对象的成员变量时加锁
 永远只在访问可变的成员变量时加锁
 永远不在调用其他对象的方法时加锁
-```
