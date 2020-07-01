@@ -1,8 +1,6 @@
 # Java Concurrency
 
-Why Concurrency: CPU, Memory and I/O have different performance. To better utilize operating system resources, we need to introduce multiple job be executed by CPU divided by time.
-
-To improve performance of system.
+Why Concurrency: CPU, Memory and I/O have different performance. 
 
 - cache layer was added to cpu
 - operating system introduced process and thread. Utilize CPU by divided time
@@ -130,7 +128,7 @@ Atomic classes internally use compare-and-swap instructions supported by modern 
 
 Your code will need to check if return value is new value. `compare_and_swap` is guarantee to be atomic by hardware.
 
-### Monitor
+### Monitor module
 
 Manage shared data and operation on them.
 
@@ -139,7 +137,12 @@ Mutual exclusion and synchronization
 
 当条件不满足，则进入条件等待队列，当被通知满足后，将等待任务移入入口等待队列，并在此判断能否执行。
 
-synchronized and wait(), notify(), notifyAll()
+synchronized: wait(), notify(), notifyAll()
+
+Invoking the notify() method is permitted only when all of the following conditions are met:
+All waiting threads have identical condition predicates.
+All threads perform the same set of operations after waking up. That is, any one thread can be selected to wake up and resume for a single invocation of notify().
+Only one thread is required to wake upon the notification.
 
 ## Java thread life cycle
 
@@ -158,21 +161,20 @@ Runnable -> Terminated (stop(), interrupt())
 
 ### Locks
 
-#### Lock and Condition
+#### ReentrantrantLock and Condition
 
-##### ReentrantrantLock
+lock.lock() will lock resource.
+condition.await() can release the occupation of current lock.
+condition.signal() will revode the thread, and thus obtain the lock again.
 
-##### Condition
+#### Semaphore
 
-Condition in monitor module
-`final Condition notFull = lock.newCondition();`
-await(), signal(), signalAll() ~= wait(), notify(), notifyAll()
+semaphore(int n): assign number of permits
+semaphore.acquire(): take a permit
+semaphore.release(): release a permit
+use try{}finally{} to acquire and release permits
 
-##### Semaphore
-
-init(), up(), down() singal module.
-
-##### ReadWriteLock
+#### ReadWriteLock
 
 Allow multiple reads to shared resource
 Allow only one thread write
@@ -188,7 +190,7 @@ Optimistic Reading: no lock at all, be reading will failed when write lock is he
 
 ##### CountDownLatch
 
-1 thread wait for multiple threads
+1 thread wait for multiple threads. Wait for N result
 
 ##### CyclicBarrier
 
@@ -201,8 +203,77 @@ Synchronized collections
 
 Concrruent collection: List,Set,Map,Queue(deque, block)
 
+##### Atomic class
+
+No lock solution: compare-and-swap(CAS). Supported by hardware.
+
+Check expected value and current value in memory. 
+
+伴随自旋: keep trying.
+
+ignore ABA problem
+
+- Atomic primitive: AtomoicBoolean, AtomicInteger, AtomicLong
+- Atomic reference: ABA problem. Use versionStamp
+`final AtomicReference rf = new AtomicReference<>( new WMRange(0,0) );`
+- Atomic array: AtomicIntegerArray, AtomicReferenceArray
+- Atomic updater: can only apply to volatile data
+- Atomic accumlator: faster
+
+##### Executor
+
+Thread creation is very expensive
+
+Producer-Consumer Mode
+In Java: ThreadPoolExecutor
+
+corePoolSize
+maximumPoolSize
+keepAliveTime & unit
+workQueue
+threadFactory
+handler
+
+ExecutorService need to be shutdown once job finished, or the process will keep running.
+
+##### Disruptor
+
+##### CompletableFuture
+
+Multithread -> Asynchronize
+
+Runnable doesn't have return value
+Supplier has return value
+
+任务关系：串行，并行，汇聚
+
+CompletionStage
+
+- sequence relation: thenApply, thenAccept, thenRun, thenCompose
+- and relation: thenCombine, thenAcceptBoth, runAfterBoth
+- or relation: applyToEither, acceptEither, runAfterEither
+
+[reactive][reactive]
+
+##### CompletionService
+
+- submit(): Callable<V> task
+- take, poll - consume from blocking queue. used to retrieve response/computation result
+
+***Executor*** is use no-boundary queue, which is not recommended
+
+##### Fork/Join
+
+Divide-Conquer
+
+ForkJoinPool
+ForkJoinTask: fork(): exec subtask aync, join(): block current thread and wait for subtask
+ RecursiveAction and RecursiveTask
+
 ## Best Practices
 
 永远只在更新对象的成员变量时加锁
 永远只在访问可变的成员变量时加锁
 永远不在调用其他对象的方法时加锁
+
+[reactive]:(http://reactivex.io/intro.html)
