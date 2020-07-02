@@ -144,6 +144,8 @@ All waiting threads have identical condition predicates.
 All threads perform the same set of operations after waking up. That is, any one thread can be selected to wake up and resume for a single invocation of notify().
 Only one thread is required to wake upon the notification.
 
+As stated in the definitions, CyclicBarrier allows a number of threads to wait on each other, whereas CountDownLatch allows one or more threads to wait for a number of tasks to complete.
+
 ## Java thread life cycle
 
 NEW->RUNNABLE<->(BLOCKED, WAITING, TIMED_WAITING)
@@ -159,13 +161,15 @@ Runnable -> Terminated (stop(), interrupt())
 
 ## Java tools for concurrency
 
-### Locks
+### ReentrantrantLock and Condition
 
-#### ReentrantrantLock and Condition
+ReentrantrantLock means a lock can be lock() multiple times within calling thread. If the thread owns the lock, it will return immediately.
 
 lock.lock() will lock resource.
-condition.await() can release the occupation of current lock.
+condition.await() will release the occupation of current lock, and let current thread wait for the wake up signal() of the condition.
 condition.signal() will revode the thread, and thus obtain the lock again.
+
+[code sample][reentrantLockAndCondition]
 
 #### Semaphore
 
@@ -176,11 +180,11 @@ use try{}finally{} to acquire and release permits
 
 #### ReadWriteLock
 
-Allow multiple reads to shared resource
-Allow only one thread write
-During write, disable read operation
-不允许锁的升级： 从读锁升级为写锁
-允许锁的降级： 从写锁升级为读锁
+Allow multiple reads operation to shared resource
+Allow only one thread write to shared resource
+During write, disable all read and other write operation
+
+obtained readlock cannot be promoted to writelock, obtained writelock can be downgraded to readlock
 
 ##### StampedLock
 
@@ -190,11 +194,20 @@ Optimistic Reading: no lock at all, be reading will failed when write lock is he
 
 ##### CountDownLatch
 
-1 thread wait for multiple threads. Wait for N result
+1 thread wait for multiple threads result.
 
 ##### CyclicBarrier
 
 resource management across multiple threads
+
+The key difference is that CountDownLatch separates threads into waiters and arrivers while all threads using a CyclicBarrier perform both roles.
+
+With a latch, the waiters wait for the last arriving thread to arrive, but those arriving threads don't do any waiting themselves.
+With a barrier, all threads arrive and then wait for the last to arrive.
+
+##### Phaser
+
+
 
 ##### Concurrent collections
 
@@ -277,3 +290,4 @@ ForkJoinTask: fork(): exec subtask aync, join(): block current thread and wait f
 永远不在调用其他对象的方法时加锁
 
 [reactive]:(http://reactivex.io/intro.html)
+[reentrantLockAndCondition]: (https://github.com/berichge/java-concurrency/tree/master/src/main/java/src/main/concurrency/lockAndCondition)
