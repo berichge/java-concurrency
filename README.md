@@ -41,6 +41,15 @@
         - [Performance indicator](#performance-indicator)
         - [Compare and swap](#compare-and-swap)
   - [Best Practices](#best-practices)
+    - [Immutabilty](#immutabilty)
+    - [Copy-on-write](#copy-on-write)
+    - [Thread local](#thread-local)
+    - [Guarded suspension](#guarded-suspension)
+    - [Balking](#balking)
+    - [Thread Per message model](#thread-per-message-model)
+    - [Worker thread model](#worker-thread-model)
+    - [Producer and Consumer mode](#producer-and-consumer-mode)
+    - [Shutdown thread](#shutdown-thread)
 
 <!-- /code_chunk_output -->
 
@@ -207,7 +216,7 @@ With a barrier, all threads arrive and then wait for the last to arrive.
 
 ##### Phaser
 
-
+Phaser is similar to CyclicBarrier and CountDownLatch, in addition, it provides more fesibilty for programmer, and allow dynamically change waiting thread.
 
 ##### Concurrent collections
 
@@ -312,14 +321,124 @@ Your code will need to check if return value is new value. `compare_and_swap` is
 
 ## Best Practices
 
-永远只在更新对象的成员变量时加锁
-永远只在访问可变的成员变量时加锁
-永远不在调用其他对象的方法时加锁
+### Immutabilty
 
-Copy-on-write: read more than write. use of Immutability pattern.
-Local storage mode, avoid sharing storage: use ThreadLocal. Thread local.
-Thread local, declare and release, thread local cannot be shared by different thread, thus it cannot be used in aync programming
+(Immutability) Read-only can solve concurrency issue.
 
+Immutable class:
+
+- Class and fields are final, all methods are read only.
+
+Use Flyweight pattern to create immutable object as cache.
+
+[reference](https://homes.cs.washington.edu/~mernst/pubs/immutability-aliasing-2013-lncs7850.pdf)
+
+### Copy-on-write
+
+- Read do not block, and effectively pay only the cost of a volatile read.
+- Write do not block reads, but only one write can occur at once.
+- Unlike concurrencyHashMap, write operation that weite or access multiple elements in the list will be atomic.
+
+It fits following use case:
+
+reads hugely outnumber writes;
+the array is small (or writes are very infrequent);
+the caller genuinely needs the functionality of a list rather than an array.
+
+### Thread local
+
+Keep variable in local thread, Java thread maintains a threadLocalMap which is only accessible by the local thread.
+
+When and why to use it?
+
+In some case, private variable in a thread is thread-safe and can be only accessed by the current thread. However, it's not work elegant enough.
+If during thread process, we need a transfer state/object to functions. One way we can do is pass the object to every method need it as parameter.
+
+
+    doGet(HttpServletRequest req, HttpServletResponse resp) {
+      User user = getLoggedInUser(req);
+      doSomething(user)
+      doSomethingElse(user)
+      renderResponse(resp,user)
+    }
+
+Or we can store it in a threadlocal container.
+
+    doGet(HttpServletRequest req, HttpServletResponse resp) {
+      User user = getLoggedInUser(req);
+      StaticClass.getThreadLocal().set(user)
+      try {
+        doSomething()
+        doSomethingElse()
+        renderResponse(resp)
+      }
+      finally {
+        StaticClass.getThreadLocal().remove()
+      }
+    }
+
+and use `User user = StaticClass.getThreadLocal().get()` to retrieve the object from methods.
+
+***ThreadLocal vs Thread local variable***
+
+When threadlocal
+
+1. Avoid passing same object to different thread.
+2. Alternate to passing variable as parameters through N-layers of code.
+3. Use set(), generate threadlocal object during runtime instead of initialaztion.
+
+### Guarded suspension
+
+GuardedObject
+get(Predicate\<T> p) - await()
+onChange(T obj) - signalAll()
+
+A mapping between GuardedOjected and id will be maintained, to retrieve GuardedObject by id.
+
+### Balking
+
+Double check to improve performance
+
+    volatile x
+    if(x==null) {
+      synchronize(xx) {
+        if (x == null)
+        x = new..
+      }
+    }
+
+Use atomic variable and compareAndSet to control one time execution.
+
+### Thread Per message model
+
+The main thread creates sub-threads for each messages/request need to be handled.
+
+Creation of Thread is expensive. Solutions can be
+
+1. Lightweight thread: Golang, Loom in Java
+2. ThreadPool
+
+### Worker thread model
+
+Thread pool.
+
+It's suggested to use boundary queue to receive task. And define task decline policy. Also assign meaningful name to thread. Also, create threadpool for different task.(Task in threadpool must be independent)
+
+### Producer and Consumer mode
+
+Key factor: decouple producer and consumer. Support asynchronize.
+
+Queue will be used to adjust producing and consuming rate.
+
+Batch processing let producer produce in stream, and consumer consumes in batch.
+
+### Shutdown thread
+
+If a thread T1 runs long time, then it's parent thread T2 can interrupt T1. T1 will change from WAITING to RUNABLE.
+
+Also, set Thread termination flag is important, so that Threads can based on the flag to terminate itself. (The flag need to be volatile since multiple thread will access it)
+
+Also, shutDown() will wait for execution of blocking queue, while shutDownAll() will drop those tasks, and return those task.
 
 [reactive]:(http://reactivex.io/intro.html)
 [reentrantLockAndCondition]: (./src/main/java/)
